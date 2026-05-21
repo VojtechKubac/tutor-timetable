@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: timetable
+      POSTGRES_USER: timetable
+      POSTGRES_PASSWORD: ticket-dev-secret
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timetable"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ticket-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        USER_UID: ${HOST_UID:-1000}
+        USER_GID: ${HOST_GID:-1000}
+    image: tutor-timetable-ticket-dev:latest
+    container_name: ${TICKET_CONTAINER_NAME:?Load .ticket-env first (set -a; source .ticket-env; set +a)}
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://timetable:ticket-dev-secret@db:5432/timetable?sslmode=disable
+      - JWT_SECRET=ticket-dev-jwt-not-for-production
+      - FRONTEND_URL=http://localhost:3000
+      - PORT=8080
+      - ANTHROPIC_API_KEY
+      - CURSOR_API_KEY
+      - GH_TOKEN
+      - LINEAR_API_KEY
+      - GH_ALLOWED_REPO_PATH=${GH_ALLOWED_REPO_PATH:-VojtechKubac/tutor-timetable.git}
+      - GIT_TERMINAL_PROMPT=0
+      - GH_PROMPT_DISABLED=1
+    volumes:
+      - ./:/workspace
+      - go-mod-cache:/go/pkg/mod
+      - npm-cache:/home/agent/.npm
+    mem_limit: 8g
+    cpus: 3
+    pids_limit: 256
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  go-mod-cache:
+  npm-cache:

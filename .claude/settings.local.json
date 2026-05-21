@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/home/kubac/GitHub/tutor-timetable/frontend/static/favicon.svg:*)"
+    ]
+  }
+}

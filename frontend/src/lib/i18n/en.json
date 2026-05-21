@@ -1,0 +1,65 @@
+{
+  "nav": {
+    "timetable": "Timetable",
+    "students": "Students",
+    "settings": "Settings",
+    "logout": "Log out"
+  },
+  "login": {
+    "title": "Sign in",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "error": {
+      "INVALID_CREDENTIALS": "Invalid email or password.",
+      "INVALID_REQUEST": "Please fill in all fields.",
+      "default": "Something went wrong. Please try again."
+    }
+  },
+  "timetable": {
+    "title": "Timetable",
+    "generate": "Generate",
+    "generating": "Generating…",
+    "empty": "No lessons yet. Add students and their availability, then press Generate.",
+    "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+    "pin": "Pin",
+    "unpin": "Unpin"
+  },
+  "students": {
+    "title": "Students",
+    "add": "Add student",
+    "name": "Name",
+    "email": "Email",
+    "notes": "Notes",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirmDelete": "Delete {name}? This will also remove their lessons.",
+    "empty": "No students yet."
+  },
+  "availability": {
+    "title": "Availability",
+    "save": "Save availability",
+    "days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "hint": "Click and drag to mark available slots."
+  },
+  "settings": {
+    "title": "Settings",
+    "workingHours": "Working hours",
+    "workingStart": "Start",
+    "workingEnd": "End",
+    "lessonDuration": "Lesson duration (min)",
+    "maxGap": "Max gap penalty (min)",
+    "maxConsecutive": "Max consecutive lessons",
+    "breakAfterN": "Compulsory break after N lessons (0 = off)",
+    "breakDuration": "Break duration (min)",
+    "save": "Save settings",
+    "saved": "Saved.",
+    "availability": "My availability"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong.",
+    "back": "Back"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "linear": {
+      "command": "/home/kubac/.nvm/versions/node/v22.22.1/bin/npx",
+      "args": ["-y", "mcp-remote", "https://mcp.linear.app/mcp"],
+      "env": {
+        "PATH": "/home/kubac/.nvm/versions/node/v22.22.1/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+# Environment
+.env
+
+# Go
+backend/vendor/
+backend/tmp/
+
+# Node
+frontend/node_modules/
+frontend/.svelte-kit/
+frontend/build/
+
+# Docker
+*.log
+
+# Agentic ticket sessions
+.agent.log
+.agent-prompt.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

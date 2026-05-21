@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-timetable}
+      POSTGRES_USER: ${POSTGRES_USER:-timetable}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-timetable}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-timetable}:${POSTGRES_PASSWORD:-secret}@db:5432/${POSTGRES_DB:-timetable}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-changeme-in-production}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      PORT: "8080"
+      SEED_EMAIL: ${SEED_EMAIL:-teacher@example.com}
+      SEED_PASSWORD: ${SEED_PASSWORD:-changeme}
+      SEED_NAME: ${SEED_NAME:-Music Teacher}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8080}
+      HOST: "0.0.0.0"
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
