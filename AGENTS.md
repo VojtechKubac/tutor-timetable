@@ -35,6 +35,7 @@ cd frontend && npm install && npm run dev && npm run check
 - Backend errors: codes only (`{"error": "NOT_FOUND"}`), never human-readable strings.
 - Frontend: all UI strings via `svelte-i18n`; API via `src/lib/api.ts` only.
 - Branch from `main` only. Naming: `kua-{number}-short-description`.
+- `backend/scheduler` is a pure domain package: do not import `net/http`, `pgx`, or `backend/api` (CI: `scripts/check-scheduler-boundary.sh`).
 
 ## Workflow
 
@@ -110,7 +111,9 @@ git ls-remote origin -h >/dev/null
 
 ```bash
 cd /workspace/backend && go test ./...
-cd /workspace/frontend && npm install && npm run check
+cd /workspace && ./scripts/check-scheduler-boundary.sh
+cd /workspace/backend && golangci-lint run
+cd /workspace/frontend && npm install && npm run check && npm run lint:dup
 ```
 
 ### Rules for agentic sessions
