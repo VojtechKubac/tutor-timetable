@@ -94,7 +94,9 @@
 		for (let c = lo; c <= hi; c++) col[c] = paintValue;
 		grid[paintDay] = col;
 		grid = grid; // trigger reactivity
-		slots = gridToSlots();
+		const updatedSlots = gridToSlots();
+		slots.splice(0, slots.length, ...updatedSlots);
+		slots = slots; // same reference — trigger reactivity without replacing caller-owned array
 	}
 
 	function stopPaint() {

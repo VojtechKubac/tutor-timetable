@@ -5,6 +5,7 @@ export default defineConfig({
 	plugins: [sveltekit()],
 	server: {
 		port: 3001,
+		strictPort: true,
 		proxy: {
 			// Proxy API calls to the Go backend in dev mode
 			'/auth': 'http://localhost:8081',

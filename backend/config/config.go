@@ -16,7 +16,7 @@ func Load() *Config {
 	return &Config{
 		DatabaseURL:  getEnv("DATABASE_URL", "postgres://timetable:secret@localhost:5432/timetable?sslmode=disable"),
 		JWTSecret:    getEnv("JWT_SECRET", "dev-secret-change-in-production"),
-		FrontendURL:  getEnv("FRONTEND_URL", "http://localhost:5173"),
+		FrontendURL:  getEnv("FRONTEND_URL", "http://localhost:3001"),
 		Port:         getEnv("PORT", "8081"),
 		SeedEmail:    getEnv("SEED_EMAIL", "teacher@example.com"),
 		SeedPassword: getEnv("SEED_PASSWORD", "changeme"),
