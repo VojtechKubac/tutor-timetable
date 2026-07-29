@@ -97,6 +97,7 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
 	class="select-none overflow-x-auto"
+	data-testid="availability-editor"
 	on:mouseup={stopPaint}
 	on:mouseleave={stopPaint}
 >
@@ -127,6 +128,10 @@
 						class:bg-gray-100={!grid[d][c]}
 						class:hover:bg-indigo-100={!grid[d][c]}
 						class:border-t-gray-200={c % CELLS_PER_HOUR === 0 && !grid[d][c]}
+						data-testid="availability-cell"
+						data-day={d}
+						data-cell={c}
+						data-active={grid[d][c] ? 'true' : 'false'}
 						on:mousedown={() => startPaint(d, c)}
 						on:mouseenter={() => applyPaint(d, c)}
 					></div>

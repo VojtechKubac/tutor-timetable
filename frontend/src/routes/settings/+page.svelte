@@ -76,6 +76,7 @@
 						type="time"
 						bind:value={settings.working_start}
 						step="300"
+						data-testid="settings-working-start"
 						class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 					/>
 				</div>
@@ -85,6 +86,7 @@
 						type="time"
 						bind:value={settings.working_end}
 						step="300"
+						data-testid="settings-working-end"
 						class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 					/>
 				</div>
@@ -97,6 +99,7 @@
 						type="number"
 						bind:value={settings.lesson_duration_minutes}
 						min="5" max="180" step="5"
+						data-testid="settings-lesson-duration"
 						class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 					/>
 				</div>
@@ -106,6 +109,7 @@
 						type="number"
 						bind:value={settings.max_gap_minutes}
 						min="0" max="120" step="5"
+						data-testid="settings-max-gap"
 						class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 					/>
 				</div>
@@ -145,12 +149,13 @@
 				<button
 					type="submit"
 					disabled={saving}
+					data-testid="settings-save"
 					class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
 				>
 					{$_('settings.save')}
 				</button>
 				{#if savedSettings}
-					<span class="text-sm text-green-600">{$_('settings.saved')}</span>
+					<span class="text-sm text-green-600" data-testid="saved-indicator">{$_('settings.saved')}</span>
 				{/if}
 			</div>
 		</form>
@@ -166,12 +171,13 @@
 			<button
 				on:click={saveAvailability}
 				disabled={saving}
+				data-testid="settings-save-availability"
 				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
 			>
 				{$_('availability.save')}
 			</button>
 			{#if savedAvail}
-				<span class="text-sm text-green-600">{$_('settings.saved')}</span>
+				<span class="text-sm text-green-600" data-testid="saved-indicator">{$_('settings.saved')}</span>
 			{/if}
 		</div>
 	</section>
