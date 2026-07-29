@@ -8,7 +8,8 @@ export const ssr = false; // Pure SPA — avoids SSR API base URL complexity in 
 
 export async function load() {
 	if (browser) {
-		// Empty in Vite dev (relative URLs + proxy); set in Docker via PUBLIC_API_URL
+		// In production (node build) the Vite dev proxy is inactive, so point the API
+		// client at the backend origin. Empty falls back to same-origin (dev proxy).
 		setApiBase(env.PUBLIC_API_URL ?? '');
 		setupI18n();
 		await waitLocale(); // wait for locale JSON to load before rendering

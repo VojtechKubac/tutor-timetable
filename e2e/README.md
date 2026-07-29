@@ -11,7 +11,7 @@ cp .env.example .env   # if needed
 docker compose up --build -d
 ```
 
-Frontend: http://localhost:3000 · Backend: http://localhost:8080  
+Frontend: http://localhost:3001 · Backend: http://localhost:8081  
 Seed login defaults: `SEED_EMAIL` / `SEED_PASSWORD` from `.env` (`teacher@example.com` / `changeme`).
 
 2. Install Playwright (once per machine / CI image):
@@ -35,8 +35,8 @@ Optional:
 |---------|---------|
 | `npm run test:headed` | Show the browser |
 | `npm run test:ui` | Playwright UI mode |
-| `PLAYWRIGHT_BASE_URL=http://localhost:3000 npm test` | Override frontend URL |
-| `PLAYWRIGHT_API_URL=http://localhost:8080 npm test` | Override API URL (API setup helpers) |
+| `PLAYWRIGHT_BASE_URL=http://localhost:3001 npm test` | Override frontend URL |
+| `PLAYWRIGHT_API_URL=http://localhost:8081 npm test` | Override API URL (API setup helpers) |
 
 Credentials are read from the repo-root `.env` (`SEED_*`, `FRONTEND_URL`, `PUBLIC_API_URL`). Do not commit secrets.
 

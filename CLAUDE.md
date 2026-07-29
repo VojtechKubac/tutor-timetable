@@ -32,7 +32,7 @@ cd backend && go mod tidy && go run .
 **Frontend only:**
 ```bash
 cd frontend && npm install && npm run dev
-# Vite proxies /auth /teacher /students /timetable → localhost:8080
+# Vite proxies /auth /teacher /students /timetable → localhost:8081
 ```
 
 **Type-check the frontend:**

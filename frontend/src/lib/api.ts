@@ -1,6 +1,6 @@
 import type { Teacher, TeacherSettings, Student, AvailabilitySlot, Lesson } from './types';
 
-// In dev the Vite proxy handles routing to localhost:8080.
+// In dev the Vite proxy handles routing to localhost:8081.
 // In production (Docker) PUBLIC_API_URL is set at runtime via SvelteKit's $env/dynamic/public.
 // We keep this file simple and use a relative base so the proxy works in dev.
 let BASE = '';

@@ -7,7 +7,7 @@
 	import type { Student, AvailabilitySlot } from '$lib/types';
 	import AvailabilityEditor from '$lib/components/AvailabilityEditor.svelte';
 
-	const studentId = $page.params.id;
+	const studentId = $page.params.id!; // always present for the [id] route segment
 
 	let student: Student | null = null;
 	let availability: AvailabilitySlot[] = [];

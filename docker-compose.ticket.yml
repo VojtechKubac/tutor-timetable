@@ -29,8 +29,8 @@ services:
     environment:
       - DATABASE_URL=postgres://timetable:ticket-dev-secret@db:5432/timetable?sslmode=disable
       - JWT_SECRET=ticket-dev-jwt-not-for-production
-      - FRONTEND_URL=http://localhost:3000
-      - PORT=8080
+      - FRONTEND_URL=http://localhost:3001
+      - PORT=8081
       - ANTHROPIC_API_KEY
       - CURSOR_API_KEY
       - GH_TOKEN
