@@ -18,7 +18,30 @@ Suggested workflow (same as homepage / trading):
 
 - One Linear ticket → one focused PR
 - Title and description reference acceptance criteria from `PLAN.md` / `CLAUDE.md`
-- Link the PR in the issue when opening it
+- Linear links PRs automatically when the branch name or PR title/description includes the issue key (e.g. `KUA-104`)
+
+## Git repository
+
+- **Remote:** https://github.com/VojtechKubac/tutor-timetable
+- **Default branch:** `main` — always branch feature work from `main`, never from another feature branch.
+
+### Branch naming
+
+Use lowercase issue key + short slug:
+
+```text
+kua-{number}-{short-slug}
+```
+
+Examples: `kua-104-initialize-git-repository`, `kua-103-ci-workflow`.
+
+Linear’s “Copy git branch name” on an issue matches this pattern. Ticket worktrees under `../worktrees/` use the same slug (see [`AGENTS.md`](../AGENTS.md)).
+
+### Pull requests
+
+- One PR per Linear issue; reference the issue in the PR title or body (`KUA-104`, `Closes KUA-104`).
+- Use the [PR template](../.github/PULL_REQUEST_TEMPLATE.md) checklist.
+- Prefer the ticket worktree workflow from [`AGENTS.md`](../AGENTS.md); main-clone PRs are for small/docs exceptions only.
 
 ## Scope reference
 
