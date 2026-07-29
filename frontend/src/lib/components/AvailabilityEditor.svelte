@@ -64,26 +64,44 @@
 	// Drag-to-paint support
 	let painting = false;
 	let paintValue = false; // true = marking available, false = clearing
+	let paintDay = -1; // drag is locked to the day it started in
+	let paintStartCell = -1;
+	let paintSnapshot: boolean[] = []; // column state when the drag began
 
-	function cellKey(day: number, cell: number) {
-		return `${day}-${cell}`;
-	}
-
-	function startPaint(day: number, cell: number) {
+	function startPaint(event: MouseEvent, day: number, cell: number) {
+		if (event.button !== 0) return; // left click only — ignore right/middle click
 		painting = true;
+		paintDay = day;
+		paintStartCell = cell;
 		paintValue = !grid[day][cell];
-		applyPaint(day, cell);
+		paintSnapshot = [...grid[day]];
+		paintRange(cell);
 	}
 
-	function applyPaint(day: number, cell: number) {
-		if (!painting) return;
-		grid[day][cell] = paintValue;
+	function extendPaint(day: number, cell: number) {
+		// Ignore drags into other days so a selection stays a single-day block
+		if (!painting || day !== paintDay) return;
+		paintRange(cell);
+	}
+
+	// Paint the contiguous range from the drag's start cell to the current cell.
+	// Repainting from the start-of-drag snapshot each move keeps fast drags gap-free
+	// and lets dragging back shrink the selection.
+	function paintRange(cell: number) {
+		const lo = Math.min(paintStartCell, cell);
+		const hi = Math.max(paintStartCell, cell);
+		const col = [...paintSnapshot];
+		for (let c = lo; c <= hi; c++) col[c] = paintValue;
+		grid[paintDay] = col;
 		grid = grid; // trigger reactivity
-		slots = gridToSlots();
+		const updatedSlots = gridToSlots();
+		slots.splice(0, slots.length, ...updatedSlots);
+		slots = slots; // same reference — trigger reactivity without replacing caller-owned array
 	}
 
 	function stopPaint() {
 		painting = false;
+		paintDay = -1;
 	}
 
 	function cellLabel(cell: number): string {
@@ -99,6 +117,7 @@
 	class="select-none overflow-x-auto"
 	on:mouseup={stopPaint}
 	on:mouseleave={stopPaint}
+	on:contextmenu|preventDefault
 >
 	<p class="mb-2 text-xs text-gray-400">{$_('availability.hint')}</p>
 
@@ -127,8 +146,8 @@
 						class:bg-gray-100={!grid[d][c]}
 						class:hover:bg-indigo-100={!grid[d][c]}
 						class:border-t-gray-200={c % CELLS_PER_HOUR === 0 && !grid[d][c]}
-						on:mousedown={() => startPaint(d, c)}
-						on:mouseenter={() => applyPaint(d, c)}
+						on:mousedown={(e) => startPaint(e, d, c)}
+						on:mouseenter={() => extendPaint(d, c)}
 					></div>
 				{/each}
 			</div>

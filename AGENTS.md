@@ -25,7 +25,7 @@ docker compose up --build
 # Backend only (needs Postgres + DATABASE_URL)
 cd backend && go mod tidy && go test ./... && go run .
 
-# Frontend only (Vite proxies API to :8080)
+# Frontend only (Vite proxies API to :8081)
 cd frontend && npm install && npm run dev && npm run check
 ```
 
