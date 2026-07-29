@@ -32,6 +32,13 @@ Password: changeme
 
 Change these in `.env` before first run.
 
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on pushes and pull requests to `main`:
+
+- Backend: `go test ./...`
+- Frontend: `npm run check` and `npm test` (Vitest)
+
 ## Local development (without Docker)
 
 **Backend**
@@ -52,6 +59,13 @@ npm install
 npm run dev
 ```
 The Vite dev server proxies `/auth`, `/teacher`, `/students`, and `/timetable` to `http://localhost:8081` automatically — no CORS configuration needed in development.
+
+Validate separately (do not chain after `npm run dev` — that process blocks the shell):
+```bash
+cd frontend
+npm run check   # typecheck
+npm test        # Vitest unit tests
+```
 
 ## End-to-end tests (Playwright)
 
