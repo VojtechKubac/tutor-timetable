@@ -39,6 +39,7 @@ cd frontend && npm run check && npm test
 - Backend errors: codes only (`{"error": "NOT_FOUND"}`), never human-readable strings.
 - Frontend: all UI strings via `svelte-i18n`; API via `src/lib/api.ts` only.
 - Branch from `main` only. Naming: `kua-{number}-short-description`.
+- `backend/scheduler` is a pure domain package: do not import `net/http`, `pgx`, or `backend/api` (CI: `scripts/check-scheduler-boundary.sh`).
 
 ## Workflow
 
@@ -100,7 +101,9 @@ git ls-remote origin -h >/dev/null
 
 ```bash
 cd /workspace/backend && go test ./...
-cd /workspace/frontend && npm install && npm run check && npm test
+cd /workspace && ./scripts/check-scheduler-boundary.sh
+cd /workspace/backend && golangci-lint run
+cd /workspace/frontend && npm install && npm run check && npm test && npm run lint:dup
 ```
 
 If `/workspace/e2e` exists, also run the Playwright E2E suite (the app stack runs as processes inside the sandbox container):

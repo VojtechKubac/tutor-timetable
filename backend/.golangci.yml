@@ -1,0 +1,29 @@
+# golangci-lint config for Tutor Timetable backend.
+# Focus: complexity + duplication (KUA-110). Broader linters can follow later.
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  disable-all: true
+  enable:
+    - gocyclo
+    - cyclop
+    - dupl
+
+linters-settings:
+  gocyclo:
+    # Generate() is currently the hottest path (~22); keep headroom without
+    # forcing a scheduler rewrite in this ticket.
+    min-complexity: 25
+  cyclop:
+    max-complexity: 25
+    package-average: 10.0
+  dupl:
+    threshold: 100
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0

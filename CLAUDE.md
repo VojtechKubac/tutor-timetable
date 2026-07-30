@@ -81,6 +81,7 @@ cd frontend && npm run check
 - Soft constraints: prefer early slots, penalise gaps > `max_gap_minutes`
 - Slot granularity: 5 minutes throughout
 - `day_of_week` 0–6, times as `"HH:MM"` strings
+- **Architecture boundary:** `backend/scheduler` must stay pure — never import `net/http`, `pgx` / `jackc/pgx`, or packages under `backend/api`. Enforced in CI by `scripts/check-scheduler-boundary.sh`.
 
 ## Database schema (Phase 1)
 
