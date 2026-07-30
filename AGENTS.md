@@ -9,11 +9,12 @@ Web app for music teachers: student availability, automatic weekly timetable gen
 ## Repository Structure
 
 ```text
-backend/           Go API, scheduler, migrations (embedded)
-frontend/          SvelteKit app
-docker-compose.yml Full stack (db + backend + frontend)
-scripts/           Ticket worktree/container workflow
-docs/              Agent and Linear docs
+backend/                   Go API, scheduler, migrations (embedded)
+frontend/                  SvelteKit app
+docker-compose.yml         Full stack (db + backend + frontend)
+docker-compose.sandbox.yml Isolated ticket sandbox (db + agent container, no host mounts)
+scripts/                   Ticket sandbox workflow (run-ticket.sh, scripts/sandbox/)
+docs/                      Agent and Linear docs
 ```
 
 ## Development Commands
@@ -38,16 +39,17 @@ cd frontend && npm install && npm run dev && npm run check
 
 ## Workflow
 
-- One Linear ticket = one dedicated git worktree + one branch + one Docker container.
+- One Linear ticket = one branch + one PR, implemented inside an **isolated Docker sandbox** (no host filesystem mounts — the repo is cloned from GitHub into a per-ticket Docker volume).
 - For agentic implementation, this workflow is the default unless explicitly overridden.
 - **Always branch from `main`**, never from another feature branch.
+- Full usage guide: [`docs/sandbox-workflow.md`](docs/sandbox-workflow.md).
 
 ### Orchestrator role — implementing a ticket from the main clone
 
-When asked to implement a ticket from the **main** repository checkout (not a ticket worktree), **do not implement in the main clone**. Instead:
+When asked to implement a ticket from the **main** repository checkout (not inside a sandbox), **do not implement in the main clone**. Instead:
 
-1. Run `./scripts/run-ticket.sh <ticket-id>` — fetches Linear, creates/reuses worktree, starts container, launches in-container agent (Claude or Cursor).
-2. Monitor output; on failure report `.agent.log` under the worktree.
+1. Run `./scripts/run-ticket.sh <ticket-id>` — fetches Linear, starts the sandbox (clone from GitHub into a Docker volume, dev-only `.env` from `.env.sandbox`), launches the in-container agent (Claude or Cursor).
+2. Monitor output; on failure report `~/.tutor-timetable/tickets/<ticket-id>/agent.log`.
 3. Only code in the main clone if the user explicitly asks or `run-ticket.sh` is unavailable.
 
 ```bash
@@ -56,45 +58,30 @@ When asked to implement a ticket from the **main** repository checkout (not a ti
 #   ANTHROPIC_API_KEY — when agent is Claude
 #   CURSOR_API_KEY    — when agent is Cursor
 
-./scripts/run-ticket.sh kua-108
+./scripts/run-ticket.sh kua-108             # run agent
+./scripts/run-ticket.sh kua-108 --resume    # re-run agent in existing sandbox
+./scripts/run-ticket.sh kua-108 --shell     # interactive bash in the sandbox
+./scripts/run-ticket.sh kua-108 --cleanup   # remove container, db, workspace volume
 ```
 
 ### Required Agent Preflight (in-container agents only)
 
-Before coding inside a ticket container:
+Before coding inside a ticket sandbox:
 
 ```bash
-pwd
-test -f .ticket-env
-set -a; source .ticket-env; set +a
-docker compose -f docker-compose.ticket.yml ps
+pwd                          # must be /workspace
+test -n "${TT_SANDBOX:-}"    # sandbox marker set by docker-compose.sandbox.yml
+test -d /workspace/.git      # workspace was initialized (clone succeeded)
+git branch --show-current    # must be the ticket branch (kua-*), never main
 ```
 
-Path should be under `../worktrees/kua-*`. If not, stop and report — do not proceed.
+If any check fails, stop and report — do not proceed.
 
-### Ticket Environment Bootstrap
+### Inside the sandbox
 
-From the main repository checkout:
+`ANTHROPIC_API_KEY`, `CURSOR_API_KEY`, and `GH_TOKEN` are forwarded from the host. Sandboxes use **dev-only** DB/JWT values from `docker-compose.sandbox.yml` and a dev-only `.env` generated from [`.env.sandbox`](.env.sandbox) — the maintainer's real `.env` never enters the sandbox.
 
-```bash
-./scripts/start-ticket-workflow.sh kua-108 short-slug
-```
-
-Or manually:
-
-```bash
-./scripts/new-ticket-env.sh kua-108 short-slug
-cd ../worktrees/kua-108-short-slug
-set -a; source .ticket-env; set +a
-docker compose -f docker-compose.ticket.yml up -d --build
-docker compose -f docker-compose.ticket.yml exec ticket-dev bash
-```
-
-### Running the AI agent inside the container
-
-`ANTHROPIC_API_KEY`, `CURSOR_API_KEY`, and `GH_TOKEN` are forwarded from the host. Ticket containers use **dev-only** DB/JWT values from `docker-compose.ticket.yml` — do not copy production `.env` into worktrees.
-
-`GH_ALLOWED_REPO_PATH` defaults to `VojtechKubac/tutor-timetable.git` (override for forks).
+`GH_ALLOWED_REPO_PATH` defaults to `VojtechKubac/tutor-timetable.git` (override for forks); the git credential helper refuses `GH_TOKEN` for any other repo, and pushes to `main`/`master` are blocked by a pre-push hook.
 
 **Claude Code:** `claude --dangerously-skip-permissions`  
 **Cursor:** `cursor-agent -p --force --sandbox disabled "implement the ticket"`
@@ -113,13 +100,26 @@ cd /workspace/backend && go test ./...
 cd /workspace/frontend && npm install && npm run check
 ```
 
+If `/workspace/e2e` exists, also run the Playwright E2E suite (the app stack runs as processes inside the sandbox container):
+
+```bash
+/workspace/scripts/sandbox/run-stack.sh start
+cd /workspace/e2e && npm install && npx playwright install chromium && npm test
+/workspace/scripts/sandbox/run-stack.sh stop
+```
+
 ### Rules for agentic sessions
 
-- Code only in the ticket worktree mounted at `/workspace`.
-- One worktree/container per ticket for parallel work.
-- Stop containers when done.
+- Code only in `/workspace` inside the sandbox container.
+- One sandbox (compose project `tt-<ticket-id>`) per ticket for parallel work.
+- Deliver results only via `git push` + GitHub PR — nothing is written to the maintainer's machine.
+- Clean up with `./scripts/run-ticket.sh <ticket-id> --cleanup` when done.
 - **Never commit `.env`** with real secrets; `.env` is gitignored.
-- Ticket Postgres uses compose dev credentials only.
+- Sandbox Postgres uses compose dev credentials only.
+
+### Legacy worktree flow (manual use only)
+
+`scripts/new-ticket-env.sh` and `scripts/start-ticket-workflow.sh` still create a host git worktree with a bind-mounted container (`docker-compose.ticket.yml`) for hands-on human work. Agents must use the sandbox flow above instead.
 
 ## What NOT to Do
 
