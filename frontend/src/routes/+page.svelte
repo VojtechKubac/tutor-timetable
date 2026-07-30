@@ -76,6 +76,7 @@
 	<button
 		on:click={generate}
 		disabled={generating}
+		data-testid="timetable-generate"
 		class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
 	>
 		{generating ? $_('timetable.generating') : $_('timetable.generate')}
@@ -89,10 +90,10 @@
 {#if loading}
 	<p class="text-gray-500">{$_('common.loading')}</p>
 {:else if lessons.length === 0}
-	<p class="text-gray-400">{$_('timetable.empty')}</p>
+	<p class="text-gray-400" data-testid="timetable-empty">{$_('timetable.empty')}</p>
 {:else}
 	<!-- Timetable grid -->
-	<div class="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+	<div class="overflow-x-auto rounded-xl border border-gray-200 bg-white" data-testid="timetable-grid">
 		<div class="flex min-w-[700px]">
 			<!-- Time axis -->
 			<div class="w-14 shrink-0 border-r border-gray-100">
@@ -137,6 +138,12 @@
 								class:border-amber-200={lesson.is_pinned}
 								style="top:{topPx(lesson.start_time)}px; height:{heightPx(lesson.start_time, lesson.end_time)}px;"
 								title="{lesson.student_name} {lesson.start_time}–{lesson.end_time}{lesson.is_pinned ? ' (pinned)' : ''}"
+								data-testid="lesson"
+								data-lesson-id={lesson.id}
+								data-student-name={lesson.student_name}
+								data-pinned={lesson.is_pinned ? 'true' : 'false'}
+								data-start={lesson.start_time}
+								data-day={lesson.day_of_week}
 							>
 								<div class="font-medium truncate">{lesson.student_name}</div>
 								<div class="text-[10px] opacity-70">{lesson.start_time}–{lesson.end_time}</div>
@@ -144,6 +151,7 @@
 									on:click|stopPropagation={() => togglePin(lesson)}
 									class="absolute top-0.5 right-0.5 text-[10px] opacity-60 hover:opacity-100"
 									title={lesson.is_pinned ? $_('timetable.unpin') : $_('timetable.pin')}
+									data-testid="lesson-pin"
 								>
 									{lesson.is_pinned ? '📌' : '·'}
 								</button>

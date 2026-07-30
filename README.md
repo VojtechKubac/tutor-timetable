@@ -32,6 +32,13 @@ Password: changeme
 
 Change these in `.env` before first run.
 
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on pushes and pull requests to `main`:
+
+- Backend: `go test ./...`
+- Frontend: `npm run check` and `npm test` (Vitest)
+
 ## Local development (without Docker)
 
 **Backend**
@@ -52,6 +59,26 @@ npm install
 npm run dev
 ```
 The Vite dev server proxies `/auth`, `/teacher`, `/students`, and `/timetable` to `http://localhost:8081` automatically — no CORS configuration needed in development.
+
+Validate separately (do not chain after `npm run dev` — that process blocks the shell):
+```bash
+cd frontend
+npm run check   # typecheck
+npm test        # Vitest unit tests
+```
+
+## End-to-end tests (Playwright)
+
+Against a running stack (`docker compose up`):
+
+```bash
+cd e2e
+npm install
+npx playwright install chromium   # once
+npm test
+```
+
+See [`e2e/README.md`](e2e/README.md) for env overrides and coverage.
 
 ## Environment variables
 
@@ -85,6 +112,7 @@ Copy `.env.example` to `.env` and adjust as needed.
 tutor-timetable/
 ├── docker-compose.yml
 ├── .env.example
+├── e2e/                         # Playwright Phase 1 happy-path specs
 ├── backend/
 │   ├── main.go                  # Entry point, DB connect, seed
 │   ├── config/config.go         # Env-based config
