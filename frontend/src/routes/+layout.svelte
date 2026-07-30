@@ -44,6 +44,7 @@
 
 			<a
 				href="/"
+				data-testid="nav-timetable"
 				class="mb-1 rounded-md px-3 py-2 text-sm font-medium transition-colors"
 				class:bg-indigo-50={$page.url.pathname === '/'}
 				class:text-indigo-700={$page.url.pathname === '/'}
@@ -55,6 +56,7 @@
 
 			<a
 				href="/students"
+				data-testid="nav-students"
 				class="mb-1 rounded-md px-3 py-2 text-sm font-medium transition-colors"
 				class:bg-indigo-50={$page.url.pathname.startsWith('/students')}
 				class:text-indigo-700={$page.url.pathname.startsWith('/students')}
@@ -66,6 +68,7 @@
 
 			<a
 				href="/settings"
+				data-testid="nav-settings"
 				class="mb-1 rounded-md px-3 py-2 text-sm font-medium transition-colors"
 				class:bg-indigo-50={$page.url.pathname === '/settings'}
 				class:text-indigo-700={$page.url.pathname === '/settings'}
@@ -76,9 +79,10 @@
 			</a>
 
 			<div class="mt-auto">
-				<p class="mb-2 truncate px-3 text-xs text-gray-400">{$teacher.name}</p>
+				<p class="mb-2 truncate px-3 text-xs text-gray-400" data-testid="teacher-name">{$teacher.name}</p>
 				<button
 					on:click={logout}
+					data-testid="nav-logout"
 					class="w-full rounded-md px-3 py-2 text-left text-sm text-gray-500 hover:bg-gray-100"
 				>
 					{$_('nav.logout')}

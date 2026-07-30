@@ -7,7 +7,7 @@
 	import type { Student, AvailabilitySlot } from '$lib/types';
 	import AvailabilityEditor from '$lib/components/AvailabilityEditor.svelte';
 
-	const studentId = $page.params.id;
+	const studentId = $page.params.id!; // always present for the [id] route segment
 
 	let student: Student | null = null;
 	let availability: AvailabilitySlot[] = [];
@@ -86,6 +86,7 @@
 					type="text"
 					bind:value={student.name}
 					required
+					data-testid="student-name"
 					class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 				/>
 			</div>
@@ -94,6 +95,7 @@
 				<input
 					type="email"
 					bind:value={student.email}
+					data-testid="student-email"
 					class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 				/>
 			</div>
@@ -102,6 +104,7 @@
 				<textarea
 					bind:value={student.notes}
 					rows="2"
+					data-testid="student-notes"
 					class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 				></textarea>
 			</div>
@@ -109,12 +112,13 @@
 				<button
 					type="submit"
 					disabled={saving}
+					data-testid="student-save-info"
 					class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
 				>
 					{$_('students.save')}
 				</button>
 				{#if savedInfo}
-					<span class="text-sm text-green-600">{$_('settings.saved')}</span>
+					<span class="text-sm text-green-600" data-testid="saved-indicator">{$_('settings.saved')}</span>
 				{/if}
 			</div>
 		</form>
@@ -130,12 +134,13 @@
 			<button
 				on:click={saveAvailability}
 				disabled={saving}
+				data-testid="student-save-availability"
 				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
 			>
 				{$_('availability.save')}
 			</button>
 			{#if savedAvail}
-				<span class="text-sm text-green-600">{$_('settings.saved')}</span>
+				<span class="text-sm text-green-600" data-testid="saved-indicator">{$_('settings.saved')}</span>
 			{/if}
 		</div>
 	</section>

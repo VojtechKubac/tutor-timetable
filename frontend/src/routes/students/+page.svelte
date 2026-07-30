@@ -61,6 +61,7 @@
 	<h1 class="text-2xl font-semibold text-gray-900">{$_('students.title')}</h1>
 	<button
 		on:click={() => (showAdd = !showAdd)}
+		data-testid="students-add"
 		class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
 	>
 		{$_('students.add')}
@@ -75,6 +76,7 @@
 {#if showAdd}
 	<form
 		on:submit|preventDefault={addStudent}
+		data-testid="students-add-form"
 		class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-3"
 	>
 		<div class="grid grid-cols-2 gap-3">
@@ -84,6 +86,7 @@
 					type="text"
 					bind:value={newName}
 					required
+					data-testid="students-name"
 					class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 				/>
 			</div>
@@ -92,6 +95,7 @@
 				<input
 					type="email"
 					bind:value={newEmail}
+					data-testid="students-email"
 					class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 				/>
 			</div>
@@ -101,6 +105,7 @@
 			<textarea
 				bind:value={newNotes}
 				rows="2"
+				data-testid="students-notes"
 				class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 			></textarea>
 		</div>
@@ -108,6 +113,7 @@
 			<button
 				type="submit"
 				disabled={saving}
+				data-testid="students-save"
 				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
 			>
 				{saving ? $_('common.loading') : $_('students.save')}
@@ -115,6 +121,7 @@
 			<button
 				type="button"
 				on:click={() => (showAdd = false)}
+				data-testid="students-cancel"
 				class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
 			>
 				{$_('students.cancel')}
@@ -132,9 +139,13 @@
 		<table class="w-full text-sm">
 			<tbody class="divide-y divide-gray-100">
 				{#each students as student (student.id)}
-					<tr class="hover:bg-gray-50">
+					<tr class="hover:bg-gray-50" data-testid="student-row" data-student-name={student.name}>
 						<td class="px-4 py-3 font-medium text-gray-900">
-							<a href="/students/{student.id}" class="hover:text-indigo-600">
+							<a
+								href="/students/{student.id}"
+								data-testid="student-link"
+								class="hover:text-indigo-600"
+							>
 								{student.name}
 							</a>
 						</td>
@@ -143,12 +154,14 @@
 						<td class="px-4 py-3 text-right">
 							<a
 								href="/students/{student.id}"
+								data-testid="student-edit"
 								class="mr-3 text-indigo-600 hover:underline"
 							>
 								Edit
 							</a>
 							<button
 								on:click={() => removeStudent(student)}
+								data-testid="student-delete"
 								class="text-red-500 hover:underline"
 							>
 								{$_('students.delete')}

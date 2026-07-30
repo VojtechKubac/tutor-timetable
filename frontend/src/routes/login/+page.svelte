@@ -42,6 +42,7 @@
 					type="email"
 					bind:value={email}
 					required
+					data-testid="login-email"
 					class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 				/>
 			</div>
@@ -55,17 +56,19 @@
 					type="password"
 					bind:value={password}
 					required
+					data-testid="login-password"
 					class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 				/>
 			</div>
 
 			{#if error}
-				<p class="text-sm text-red-600">{error}</p>
+				<p class="text-sm text-red-600" data-testid="login-error">{error}</p>
 			{/if}
 
 			<button
 				type="submit"
 				disabled={loading}
+				data-testid="login-submit"
 				class="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
 			>
 				{loading ? $_('common.loading') : $_('login.submit')}

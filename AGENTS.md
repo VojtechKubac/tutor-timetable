@@ -26,8 +26,11 @@ docker compose up --build
 # Backend only (needs Postgres + DATABASE_URL)
 cd backend && go mod tidy && go test ./... && go run .
 
-# Frontend only (Vite proxies API to :8080)
-cd frontend && npm install && npm run dev && npm run check
+# Frontend only (Vite proxies API to :8081)
+cd frontend && npm install && npm run dev
+
+# Frontend validation (separate from the long-running dev server)
+cd frontend && npm run check && npm test
 ```
 
 ## Conventions
@@ -97,7 +100,7 @@ git ls-remote origin -h >/dev/null
 
 ```bash
 cd /workspace/backend && go test ./...
-cd /workspace/frontend && npm install && npm run check
+cd /workspace/frontend && npm install && npm run check && npm test
 ```
 
 If `/workspace/e2e` exists, also run the Playwright E2E suite (the app stack runs as processes inside the sandbox container):

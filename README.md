@@ -20,8 +20,8 @@ docker compose up --build
 
 | Service  | URL                    |
 |----------|------------------------|
-| Frontend | http://localhost:3000  |
-| Backend  | http://localhost:8080  |
+| Frontend | http://localhost:3001  |
+| Backend  | http://localhost:8081  |
 
 Default login (created on first startup if no teachers exist):
 
@@ -31,6 +31,13 @@ Password: changeme
 ```
 
 Change these in `.env` before first run.
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on pushes and pull requests to `main`:
+
+- Backend: `go test ./...`
+- Frontend: `npm run check` and `npm test` (Vitest)
 
 ## Local development (without Docker)
 
@@ -51,7 +58,27 @@ cd frontend
 npm install
 npm run dev
 ```
-The Vite dev server proxies `/auth`, `/teacher`, `/students`, and `/timetable` to `http://localhost:8080` automatically — no CORS configuration needed in development.
+The Vite dev server proxies `/auth`, `/teacher`, `/students`, and `/timetable` to `http://localhost:8081` automatically — no CORS configuration needed in development.
+
+Validate separately (do not chain after `npm run dev` — that process blocks the shell):
+```bash
+cd frontend
+npm run check   # typecheck
+npm test        # Vitest unit tests
+```
+
+## End-to-end tests (Playwright)
+
+Against a running stack (`docker compose up`):
+
+```bash
+cd e2e
+npm install
+npx playwright install chromium   # once
+npm test
+```
+
+See [`e2e/README.md`](e2e/README.md) for env overrides and coverage.
 
 ## Environment variables
 
@@ -63,11 +90,11 @@ Copy `.env.example` to `.env` and adjust as needed.
 | `POSTGRES_USER`   | `timetable`              | Database user                            |
 | `POSTGRES_PASSWORD` | `secret`               | Database password                        |
 | `JWT_SECRET`      | `changeme-in-production` | Secret for signing auth tokens — **change this** |
-| `FRONTEND_URL`    | `http://localhost:3000`  | Allowed CORS origin                      |
+| `FRONTEND_URL`    | `http://localhost:3001`  | Allowed CORS origin                      |
 | `SEED_EMAIL`      | `teacher@example.com`    | Email for the seed teacher account       |
 | `SEED_PASSWORD`   | `changeme`               | Password for the seed teacher account    |
 | `SEED_NAME`       | `Music Teacher`          | Display name for the seed teacher        |
-| `PUBLIC_API_URL`  | `http://localhost:8080`  | API base URL (used by the frontend container) |
+| `PUBLIC_API_URL`  | `http://localhost:8081`  | API base URL (used by the frontend container) |
 
 ## Features (Phase 1)
 
@@ -85,6 +112,7 @@ Copy `.env.example` to `.env` and adjust as needed.
 tutor-timetable/
 ├── docker-compose.yml
 ├── .env.example
+├── e2e/                         # Playwright Phase 1 happy-path specs
 ├── backend/
 │   ├── main.go                  # Entry point, DB connect, seed
 │   ├── config/config.go         # Env-based config
