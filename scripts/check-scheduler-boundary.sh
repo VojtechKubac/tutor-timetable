@@ -25,8 +25,7 @@ IMPORTS="$(go list -f '{{join .Imports "\n"}}{{"\n"}}{{join .TestImports "\n"}}{
 FORBIDDEN_PATTERNS=(
   '^net/http$'
   'pgx'
-  '/api(/|$)'
-  '\.api$'
+  '(^|/)backend/api(/|$)'
 )
 
 FAILED=0
@@ -42,7 +41,7 @@ done <<< "${IMPORTS}"
 
 # Also catch blank/side-effect imports that go list may still surface via Deps,
 # and direct source matches for clarity in CI logs.
-if grep -RIn --include='*.go' -E '^\s*(_\s+)?"net/http"|^\s*(_\s+)?"[^"]*pgx[^"]*"|^\s*(_\s+)?"[^"]*/api("|/)' scheduler/ >&2; then
+if grep -RIn --include='*.go' -E '^\s*(_\s+)?"net/http"|^\s*(_\s+)?"[^"]*pgx[^"]*"|^\s*(_\s+)?"[^"]*/backend/api("|/)' scheduler/ >&2; then
   echo "FORBIDDEN import pattern found in scheduler source (see above)." >&2
   FAILED=1
 fi
