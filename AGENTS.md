@@ -26,7 +26,10 @@ docker compose up --build
 cd backend && go mod tidy && go test ./... && go run .
 
 # Frontend only (Vite proxies API to :8081)
-cd frontend && npm install && npm run dev && npm run check
+cd frontend && npm install && npm run dev
+
+# Frontend validation (separate from the long-running dev server)
+cd frontend && npm run check && npm test
 ```
 
 ## Conventions
@@ -110,7 +113,7 @@ git ls-remote origin -h >/dev/null
 
 ```bash
 cd /workspace/backend && go test ./...
-cd /workspace/frontend && npm install && npm run check
+cd /workspace/frontend && npm install && npm run check && npm test
 ```
 
 ### Rules for agentic sessions
