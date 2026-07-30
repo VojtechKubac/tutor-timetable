@@ -4,7 +4,7 @@ import { waitLocale } from 'svelte-i18n';
 import { env } from '$env/dynamic/public';
 import { setApiBase } from '$lib/api';
 
-export const ssr = false; // Pure SPA — avoids API base URL complexity in Phase 1
+export const ssr = false; // Pure SPA — avoids SSR API base URL complexity in Phase 1
 
 export async function load() {
 	if (browser) {

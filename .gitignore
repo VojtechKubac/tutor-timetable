@@ -9,6 +9,11 @@ backend/tmp/
 frontend/node_modules/
 frontend/.svelte-kit/
 frontend/build/
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+e2e/playwright/.cache/
 
 # Docker
 *.log
