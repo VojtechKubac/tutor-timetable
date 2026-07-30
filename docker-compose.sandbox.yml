@@ -1,0 +1,75 @@
+# Isolated ticket sandbox: no host filesystem mounts. The repo is cloned from
+# GitHub into the per-ticket `workspace` volume by scripts/sandbox/init-workspace.sh.
+#
+# Run with a per-ticket compose project so parallel tickets are isolated:
+#   docker compose -p tt-<ticket-id> -f docker-compose.sandbox.yml up -d
+# (scripts/run-ticket.sh does this for you.)
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: timetable
+      POSTGRES_USER: timetable
+      POSTGRES_PASSWORD: ticket-dev-secret
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timetable"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ticket-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        USER_UID: ${HOST_UID:-1000}
+        USER_GID: ${HOST_GID:-1000}
+    image: tutor-timetable-ticket-dev:latest
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - TT_SANDBOX=1
+      - DATABASE_URL=postgres://timetable:ticket-dev-secret@db:5432/timetable?sslmode=disable
+      - JWT_SECRET=ticket-dev-jwt-not-for-production
+      - FRONTEND_URL=http://localhost:3001
+      - PORT=8081
+      - ANTHROPIC_API_KEY
+      - CURSOR_API_KEY
+      - GH_TOKEN
+      - LINEAR_API_KEY
+      - GH_ALLOWED_REPO_PATH=${GH_ALLOWED_REPO_PATH:-VojtechKubac/tutor-timetable.git}
+      - GIT_TERMINAL_PROMPT=0
+      - GH_PROMPT_DISABLED=1
+    volumes:
+      - workspace:/workspace
+      - go-mod-cache:/go/pkg/mod
+      - npm-cache:/home/agent/.npm
+      - playwright-browsers:/ms-playwright
+    mem_limit: 8g
+    cpus: 3
+    # Higher than the worktree flow: Chromium + vite + go need plenty of threads.
+    pids_limit: 1024
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  # Per-ticket (prefixed with the compose project name); removed by `down -v`.
+  workspace:
+  # Shared caches across tickets; external so `down -v` never deletes them.
+  # scripts/run-ticket.sh creates them with `docker volume create`.
+  go-mod-cache:
+    external: true
+    name: tutor-timetable-go-mod-cache
+  npm-cache:
+    external: true
+    name: tutor-timetable-npm-cache
+  playwright-browsers:
+    external: true
+    name: tutor-timetable-playwright-browsers

@@ -7,7 +7,7 @@ Instructions and context for Claude when working on this codebase.
 - Team: **Kubac**
 - Project for all repo issues: **Tutor Timetable** — see [`docs/linear.md`](docs/linear.md)
 - When creating issues via MCP (`save_issue`), set `project` to **Tutor Timetable** and `team` to **Kubac**
-- Agentic workflow (worktree + container): [`AGENTS.md`](AGENTS.md), `./scripts/run-ticket.sh`
+- Agentic workflow (isolated Docker sandbox): [`AGENTS.md`](AGENTS.md), [`docs/sandbox-workflow.md`](docs/sandbox-workflow.md), `./scripts/run-ticket.sh`
 
 ## Stack
 

@@ -1,26 +1,85 @@
 #!/usr/bin/env bash
-# run-ticket.sh — fetch Linear ticket, start container, run in-container agent.
+# run-ticket.sh — implement a Linear ticket inside an isolated Docker sandbox.
 #
-# Usage: ./scripts/run-ticket.sh <ticket-id>
-#   e.g. ./scripts/run-ticket.sh kua-108
+# The sandbox has NO host filesystem mounts: the repo is cloned from GitHub
+# into a per-ticket Docker volume, a dev-only .env is generated from the
+# committed .env.sandbox template, and the agent pushes results back as a
+# branch + PR. The only host artifacts are logs under
+# ~/.tutor-timetable/tickets/<ticket-id>/.
 #
-# Required host env:
+# Usage:
+#   ./scripts/run-ticket.sh <ticket-id>            # create sandbox + run agent
+#   ./scripts/run-ticket.sh <ticket-id> --resume   # re-run agent in existing sandbox
+#   ./scripts/run-ticket.sh <ticket-id> --shell    # interactive bash in the sandbox
+#   ./scripts/run-ticket.sh <ticket-id> --cleanup  # remove container, db and workspace volume
+#
+# Required host env (run/resume):
 #   GH_TOKEN, LINEAR_API_KEY
 #   ANTHROPIC_API_KEY (Claude) or CURSOR_API_KEY (Cursor)
-# Optional: AGENT_CLI=claude|cursor
+# Optional: AGENT_CLI=claude|cursor, GH_ALLOWED_REPO_PATH=<owner>/<repo>.git
 
 set -euo pipefail
 
-if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 <ticket-id>" >&2
+usage() {
+  echo "Usage: $0 <ticket-id> [--resume|--shell|--cleanup]" >&2
   echo "Example: $0 kua-108" >&2
   exit 1
-fi
+}
 
-if [[ ! "$1" =~ ^[a-z]+-[0-9]+$ ]]; then
+[[ $# -ge 1 ]] || usage
+
+TICKET_ID="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+shift
+
+if [[ ! "${TICKET_ID}" =~ ^[a-z]+-[0-9]+$ ]]; then
   echo "Error: ticket-id must match '<team>-<number>' (example: kua-108)." >&2
   exit 1
 fi
+
+MODE="run"
+for arg in "$@"; do
+  case "${arg}" in
+    --resume)  MODE="resume" ;;
+    --shell)   MODE="shell" ;;
+    --cleanup) MODE="cleanup" ;;
+    *) usage ;;
+  esac
+done
+
+TICKET_ID_UPPER="$(printf '%s' "${TICKET_ID}" | tr '[:lower:]' '[:upper:]')"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+COMPOSE_FILE="${REPO_ROOT}/docker-compose.sandbox.yml"
+PROJECT="tt-${TICKET_ID}"
+STATE_DIR="${HOME}/.tutor-timetable/tickets/${TICKET_ID}"
+
+export HOST_UID="$(id -u)"
+export HOST_GID="$(id -g)"
+export GH_ALLOWED_REPO_PATH="${GH_ALLOWED_REPO_PATH:-VojtechKubac/tutor-timetable.git}"
+
+compose() {
+  docker compose -p "${PROJECT}" -f "${COMPOSE_FILE}" "$@"
+}
+
+if [[ "${MODE}" == "cleanup" ]]; then
+  echo "Removing sandbox for ${TICKET_ID_UPPER} (container, db, workspace volume)..."
+  compose down --volumes --remove-orphans
+  echo "Done. Logs kept in ${STATE_DIR}. Shared caches are untouched."
+  exit 0
+fi
+
+# Shared caches survive `down --volumes` because they are external volumes.
+for vol in tutor-timetable-go-mod-cache tutor-timetable-npm-cache tutor-timetable-playwright-browsers; do
+  docker volume create "${vol}" >/dev/null
+done
+
+if [[ "${MODE}" == "shell" ]]; then
+  compose up -d --build
+  echo "Opening shell in ${TICKET_ID_UPPER} sandbox (workspace may be empty if the agent never ran)..."
+  exec docker compose -p "${PROJECT}" -f "${COMPOSE_FILE}" exec ticket-dev bash
+fi
+
+# --- run / resume ---
 
 detect_agent_cli() {
   local override="${AGENT_CLI:-}"
@@ -72,17 +131,6 @@ normalize_slug() {
     | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//'
 }
 
-TICKET_ID="$1"
-TICKET_ID_UPPER="$(printf '%s' "${TICKET_ID}" | tr '[:lower:]' '[:upper:]')"
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-COMMON_GIT_DIR="$(git -C "${REPO_ROOT}" rev-parse --git-common-dir)"
-COMMON_GIT_DIR_ABS="$(cd "${COMMON_GIT_DIR}" && pwd)"
-MAIN_CHECKOUT_DIR="$(dirname "${COMMON_GIT_DIR_ABS}")"
-PARENT_DIR="$(dirname "${MAIN_CHECKOUT_DIR}")"
-WORKTREES_DIR="${PARENT_DIR}/worktrees"
-
 TEAM_KEY="$(printf '%s' "${TICKET_ID}" | sed 's/-[0-9]*$//' | tr '[:lower:]' '[:upper:]')"
 TICKET_NUM="$(printf '%s' "${TICKET_ID}" | grep -oE '[0-9]+$')"
 
@@ -117,43 +165,57 @@ fi
 echo "  Title: ${TICKET_TITLE}"
 echo "  URL:   ${TICKET_URL}"
 
-EXISTING_WORKTREE=$(find "${WORKTREES_DIR}" -maxdepth 1 -type d -name "${TICKET_ID}-*" 2>/dev/null | sort | head -1 || true)
+mkdir -p "${STATE_DIR}"
 
-if [[ -n "${EXISTING_WORKTREE}" ]]; then
-  WORKTREE_DIR="${EXISTING_WORKTREE}"
-  BRANCH_NAME="$(basename "${WORKTREE_DIR}")"
-  echo "Reusing existing worktree: ${WORKTREE_DIR}"
+# Branch name is sticky per ticket so --resume reuses the same branch even if
+# the Linear title changed.
+BRANCH_FILE="${STATE_DIR}/branch"
+if [[ -f "${BRANCH_FILE}" ]]; then
+  BRANCH_NAME="$(cat "${BRANCH_FILE}")"
 else
   SLUG="$(normalize_slug "${TICKET_TITLE}" | cut -c1-40 | sed 's/-$//')"
   BRANCH_NAME="${TICKET_ID}-${SLUG}"
-  WORKTREE_DIR="${WORKTREES_DIR}/${BRANCH_NAME}"
-  echo "Creating worktree: ${WORKTREE_DIR}"
-  "${SCRIPT_DIR}/start-ticket-workflow.sh" "${TICKET_ID}" "${SLUG}"
+  printf '%s\n' "${BRANCH_NAME}" > "${BRANCH_FILE}"
 fi
 
-cd "${WORKTREE_DIR}"
-if [[ ! -f .ticket-env ]]; then
-  echo "Error: .ticket-env not found in ${WORKTREE_DIR}" >&2
-  exit 1
-fi
-set -a; source .ticket-env; set +a
+echo "  Branch: ${BRANCH_NAME}"
+echo "  Sandbox project: ${PROJECT}"
 
-if ! docker compose -f docker-compose.ticket.yml up -d 2>&1; then
-  echo "Error: failed to start container for ${TICKET_ID_UPPER}" >&2
+if ! compose up -d --build; then
+  echo "Error: failed to start sandbox for ${TICKET_ID_UPPER}" >&2
   exit 1
 fi
 
-PROMPT_FILE="${WORKTREE_DIR}/.agent-prompt.txt"
-LOG_FILE="${WORKTREE_DIR}/.agent.log"
+REPO_URL="https://github.com/${GH_ALLOWED_REPO_PATH%.git}.git"
 
-cleanup() {
-  rm -f "${PROMPT_FILE:-}"
-}
-trap cleanup EXIT INT TERM
+echo "Initializing workspace (clone from ${REPO_URL})..."
+if ! compose exec -T ticket-dev bash -s -- "${REPO_URL}" "${BRANCH_NAME}" \
+    < "${SCRIPT_DIR}/sandbox/init-workspace.sh"; then
+  echo "Error: workspace initialization failed for ${TICKET_ID_UPPER}" >&2
+  exit 1
+fi
+
+PROMPT_FILE="${STATE_DIR}/prompt.txt"
+LOG_FILE="${STATE_DIR}/agent.log"
+
+RESUME_NOTE=""
+if [[ "${MODE}" == "resume" ]]; then
+  RESUME_NOTE="
+## Resumed session
+
+This sandbox already contains earlier work on this ticket. Start by inspecting
+\`git status\`, \`git log origin/main..HEAD\` and any open PR for branch
+${BRANCH_NAME} (\`gh pr list --head ${BRANCH_NAME}\`), then continue — e.g.
+address review comments or finish incomplete work.
+"
+fi
 
 cat > "${PROMPT_FILE}" <<PROMPT
 You are a coding agent implementing Linear ticket ${TICKET_ID_UPPER}.
-
+You run inside an isolated sandbox container; the repo is cloned at /workspace
+on branch ${BRANCH_NAME}. There is no access to the maintainer's machine —
+deliver results only via git push and a GitHub PR.
+${RESUME_NOTE}
 ## Ticket
 
 **Title:** ${TICKET_TITLE}
@@ -170,16 +232,25 @@ ${TICKET_DESC}
 3. Before committing, run quality checks and fix failures:
    \`\`\`
    cd /workspace/backend && go test ./...
-   cd /workspace/frontend && npm install && npm run check
+   cd /workspace/frontend && npm install && npm run check && npm test
    \`\`\`
-4. Commit: "${TICKET_ID_UPPER}: <short description>"
-5. Push: \`git push -u origin ${BRANCH_NAME}\`
-6. Open PR with Summary, Test plan checklist, and footer:
+4. If /workspace/e2e exists, also run the Playwright E2E suite and fix failures:
+   \`\`\`
+   /workspace/scripts/sandbox/run-stack.sh start
+   cd /workspace/e2e && npm install && npx playwright install chromium && npm test
+   /workspace/scripts/sandbox/run-stack.sh stop
+   \`\`\`
+   (Browsers install into a cached volume, so this is fast after the first run.)
+5. Commit: "${TICKET_ID_UPPER}: <short description>"
+6. Push: \`git push -u origin ${BRANCH_NAME}\`
+7. Open PR with Summary, Test plan checklist, and footer:
    ${AGENT_FOOTER_LINE}
-7. If CodeRabbit is enabled, address all review comments before finishing.
+8. If CodeRabbit is enabled, address all review comments before finishing.
 
 Work autonomously to completion. Do not pause for confirmation.
 PROMPT
+
+compose exec -T ticket-dev bash -c 'cat > /workspace/.agent-prompt.txt' < "${PROMPT_FILE}"
 
 echo ""
 echo "Launching ${AGENT_LABEL} agent for ${TICKET_ID_UPPER} (log: ${LOG_FILE})..."
@@ -187,21 +258,25 @@ echo ""
 
 set +e
 if [[ "${AGENT_CLI}" == "cursor" ]]; then
-  docker compose -f docker-compose.ticket.yml exec -T ticket-dev \
+  compose exec -T ticket-dev \
     bash -c 'cursor-agent -p --force --sandbox disabled "$(cat /workspace/.agent-prompt.txt)"' \
     2>&1 | tee "${LOG_FILE}"
   AGENT_EXIT=${PIPESTATUS[0]}
 else
-  docker compose -f docker-compose.ticket.yml exec -T ticket-dev \
+  compose exec -T ticket-dev \
     bash -c 'claude --dangerously-skip-permissions -p "$(cat /workspace/.agent-prompt.txt)"' \
     2>&1 | tee "${LOG_FILE}"
   AGENT_EXIT=${PIPESTATUS[0]}
 fi
 set -e
 
+compose exec -T ticket-dev bash -c 'rm -f /workspace/.agent-prompt.txt' || true
+
 echo ""
 if [[ ${AGENT_EXIT} -eq 0 ]]; then
   echo "✓ ${TICKET_ID_UPPER} completed — see ${LOG_FILE}"
+  echo "  Inspect:  $0 ${TICKET_ID} --shell"
+  echo "  Clean up: $0 ${TICKET_ID} --cleanup"
 else
   echo "✗ ${TICKET_ID_UPPER} failed (exit ${AGENT_EXIT}) — see ${LOG_FILE}" >&2
   exit "${AGENT_EXIT}"

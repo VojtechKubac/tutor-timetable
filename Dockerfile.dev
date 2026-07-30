@@ -1,7 +1,8 @@
 FROM golang:1.22-bookworm
 
 ARG USERNAME=agent
-ARG GH_VERSION=2.89.0
+# The gh apt repo only keeps the latest release; bump when builds break.
+ARG GH_VERSION=2.96.0
 ARG GH_ALLOWED_REPO_PATH=VojtechKubac/tutor-timetable.git
 ARG USER_UID=1000
 ARG USER_GID=1000
@@ -56,6 +57,14 @@ RUN npm install -g @anthropic-ai/claude-code \
     && chmod 755 /root /root/.local /root/.local/bin \
     && chmod -R a+rx /root/.local/share/cursor-agent
 
+# Playwright: system libraries baked in; browsers are installed at runtime by
+# the agent (`npx playwright install chromium`) into the shared /ms-playwright
+# cache volume so they survive container rebuilds.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN mkdir -p /ms-playwright && chmod 777 /ms-playwright \
+    && npx --yes playwright@1.52.0 install-deps chromium \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN git config --system user.name "ticket-agent" \
     && git config --system user.email "ticket-agent@noreply" \
     && git config --system core.hooksPath /git-hooks
@@ -65,12 +74,22 @@ RUN mkdir -p /git-hooks \
     && chmod +x /git-hooks/pre-push
 
 RUN groupadd --gid "${USER_GID}" "${USERNAME}" \
-    && useradd --uid "${USER_UID}" --gid "${USER_GID}" --create-home --shell /bin/bash "${USERNAME}"
+    && useradd --uid "${USER_UID}" --gid "${USER_GID}" --create-home --shell /bin/bash "${USERNAME}" \
+    # npm cache volume mountpoint must pre-exist agent-owned
+    && mkdir -p "/home/${USERNAME}/.npm" \
+    && chown -R "${USER_UID}:${USER_GID}" "/home/${USERNAME}/.npm"
 
 WORKDIR /workspace
 
 COPY backend/go.mod /tmp/backend/go.mod
 RUN cd /tmp/backend && go mod download 2>/dev/null || true
+
+# The sandbox workspace and Go module cache are named volumes that inherit
+# these directories' ownership on first use; they must be writable by the
+# agent user (git clone, go build). Must run AFTER the go mod prefetch above.
+RUN chown "${USER_UID}:${USER_GID}" /workspace \
+    && mkdir -p /go/pkg/mod \
+    && chown -R "${USER_UID}:${USER_GID}" /go/pkg
 
 USER ${USERNAME}
 
