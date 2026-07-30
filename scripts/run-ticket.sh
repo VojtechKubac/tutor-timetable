@@ -232,7 +232,7 @@ ${TICKET_DESC}
 3. Before committing, run quality checks and fix failures:
    \`\`\`
    cd /workspace/backend && go test ./...
-   cd /workspace/frontend && npm install && npm run check
+   cd /workspace/frontend && npm install && npm run check && npm test
    \`\`\`
 4. If /workspace/e2e exists, also run the Playwright E2E suite and fix failures:
    \`\`\`
