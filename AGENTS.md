@@ -57,10 +57,7 @@ When asked to implement a ticket from the **main** repository checkout (not insi
 3. Only code in the main clone if the user explicitly asks or `run-ticket.sh` is unavailable.
 
 ```bash
-# Host shell before run-ticket.sh:
-#   GH_TOKEN, LINEAR_API_KEY — required
-#   ANTHROPIC_API_KEY — when agent is Claude
-#   CURSOR_API_KEY    — when agent is Cursor
+# One-time: cp .env.agent.example .env.agent and fill in tokens (run-ticket.sh sources it automatically)
 
 ./scripts/run-ticket.sh kua-108             # run agent
 ./scripts/run-ticket.sh kua-108 --resume    # re-run agent in existing sandbox

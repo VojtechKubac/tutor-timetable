@@ -13,13 +13,41 @@ The agent must be able to operate freely (edit anything, run anything, including
 
 ## Prerequisites (host shell)
 
+Copy the example secrets file once and fill in your tokens:
+
 ```bash
-export GH_TOKEN=...          # repo-scoped GitHub token
-export LINEAR_API_KEY=...    # to fetch the ticket
-export ANTHROPIC_API_KEY=... # when AGENT_CLI=claude (default)
-# or
-export CURSOR_API_KEY=...    # with AGENT_CLI=cursor
+cp .env.agent.example .env.agent   # gitignored — never commit
 ```
+
+`run-ticket.sh` sources `.env.agent` automatically. Alternatively, add this to `~/.bashrc` if you want the vars in every shell:
+
+```bash
+source ~/GitHub/tutor-timetable/.env.agent
+```
+
+Required variables (see [`.env.agent.example`](../.env.agent.example)):
+
+- `GH_TOKEN` — repo-scoped GitHub token
+- `LINEAR_API_KEY` — to fetch the ticket
+- **Claude (default):** `CLAUDE_CODE_OAUTH_TOKEN` for Pro/Max subscription, **or** `ANTHROPIC_API_KEY` for API pay-as-you-go
+- **Cursor:** `CURSOR_API_KEY` with `AGENT_CLI=cursor`
+
+### Claude Pro/Max vs API key
+
+The sandbox runs `claude -p` headlessly. Two auth options:
+
+| Method | Variable | Billing |
+|---|---|---|
+| **Pro/Max subscription** (recommended) | `CLAUDE_CODE_OAUTH_TOKEN` | Your plan's included usage |
+| API pay-as-you-go | `ANTHROPIC_API_KEY` | Anthropic Console, per token |
+
+To use your Pro account, run **once** on your host (interactive browser login):
+
+```bash
+claude setup-token
+```
+
+Copy the printed token into `.env.agent` as `CLAUDE_CODE_OAUTH_TOKEN`. Do **not** set `ANTHROPIC_API_KEY` at the same time — if both are present, Claude Code prefers the API key and you'll be charged pay-as-you-go instead of using your subscription.
 
 ## Usage
 

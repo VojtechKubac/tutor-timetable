@@ -13,12 +13,24 @@
 #   ./scripts/run-ticket.sh <ticket-id> --shell    # interactive bash in the sandbox
 #   ./scripts/run-ticket.sh <ticket-id> --cleanup  # remove container, db and workspace volume
 #
-# Required host env (run/resume):
+# Required host env (run/resume) — set in .env.agent (see .env.agent.example)
 #   GH_TOKEN, LINEAR_API_KEY
-#   ANTHROPIC_API_KEY (Claude) or CURSOR_API_KEY (Cursor)
+#   Claude: CLAUDE_CODE_OAUTH_TOKEN (Pro/Max) or ANTHROPIC_API_KEY (API billing)
+#   Cursor: CURSOR_API_KEY
 # Optional: AGENT_CLI=claude|cursor, GH_ALLOWED_REPO_PATH=<owner>/<repo>.git
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Host secrets: copy .env.agent.example → .env.agent (gitignored).
+if [[ -f "${REPO_ROOT}/.env.agent" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "${REPO_ROOT}/.env.agent"
+  set +a
+fi
 
 usage() {
   echo "Usage: $0 <ticket-id> [--resume|--shell|--cleanup]" >&2
@@ -47,8 +59,6 @@ for arg in "$@"; do
 done
 
 TICKET_ID_UPPER="$(printf '%s' "${TICKET_ID}" | tr '[:lower:]' '[:upper:]')"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 COMPOSE_FILE="${REPO_ROOT}/docker-compose.sandbox.yml"
 PROJECT="tt-${TICKET_ID}"
 STATE_DIR="${HOME}/.tutor-timetable/tickets/${TICKET_ID}"
@@ -113,16 +123,20 @@ done
 if [[ "${AGENT_CLI}" == "cursor" ]]; then
   AGENT_LABEL="Cursor"
   AGENT_FOOTER_LINE="🤖 Generated with [Cursor](https://cursor.com)"
-  REQUIRED_AGENT_API_KEY="CURSOR_API_KEY"
+  if [[ -z "${CURSOR_API_KEY:-}" ]]; then
+    echo "Error: CURSOR_API_KEY is required when AGENT_CLI=cursor." >&2
+    exit 1
+  fi
 else
   AGENT_LABEL="Claude"
   AGENT_FOOTER_LINE="🤖 Generated with [Claude Code](https://claude.com/claude-code)"
-  REQUIRED_AGENT_API_KEY="ANTHROPIC_API_KEY"
-fi
-
-if [[ -z "${!REQUIRED_AGENT_API_KEY:-}" ]]; then
-  echo "Error: ${REQUIRED_AGENT_API_KEY} is required when AGENT_CLI=${AGENT_CLI}." >&2
-  exit 1
+  if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -z "${ANTHROPIC_API_KEY:-}" ]]; then
+    echo "Error: set CLAUDE_CODE_OAUTH_TOKEN (Pro/Max subscription) or ANTHROPIC_API_KEY (API billing) for Claude." >&2
+    exit 1
+  fi
+  if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -n "${ANTHROPIC_API_KEY:-}" ]]; then
+    echo "Warning: both CLAUDE_CODE_OAUTH_TOKEN and ANTHROPIC_API_KEY are set; Claude Code will use the API key (pay-as-you-go)." >&2
+  fi
 fi
 
 normalize_slug() {
@@ -149,11 +163,11 @@ try:
     d = json.loads(sys.stdin.read())
     nodes = d.get("data", {}).get("issues", {}).get("nodes", [])
     n = nodes[0] if nodes else {}
-    print(f"TICKET_TITLE={shlex.quote(n.get(\"title\") or \"\")}")
-    print(f"TICKET_DESC={shlex.quote(n.get(\"description\") or \"\")}")
-    print(f"TICKET_URL={shlex.quote(n.get(\"url\") or \"\")}")
+    print("TICKET_TITLE=" + shlex.quote(n.get("title") or ""))
+    print("TICKET_DESC=" + shlex.quote(n.get("description") or ""))
+    print("TICKET_URL=" + shlex.quote(n.get("url") or ""))
 except Exception as e:
-    print(f"echo '\''JSON parse error: {e}'\'' >&2; exit 1")
+    print("echo " + shlex.quote("JSON parse error: " + str(e)) + " >&2; exit 1")
 '
 )"
 
