@@ -45,6 +45,10 @@ else
   git checkout -b "${BRANCH_NAME}" "${BASE_REF}"
 fi
 
+if git show-ref --verify --quiet "refs/remotes/origin/${BRANCH_NAME}"; then
+  git branch --set-upstream-to="origin/${BRANCH_NAME}" "${BRANCH_NAME}" 2>/dev/null || true
+fi
+
 # Dev-only .env: copied from the committed sandbox template, never from the
 # host. Fallback covers branches created before .env.sandbox was merged.
 if [[ ! -f .env ]]; then

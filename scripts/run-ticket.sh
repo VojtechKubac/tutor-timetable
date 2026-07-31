@@ -71,6 +71,24 @@ compose() {
   docker compose -p "${PROJECT}" -f "${COMPOSE_FILE}" "$@"
 }
 
+ensure_sandbox_running() {
+  if ! compose up -d --build; then
+    echo "Error: failed to start sandbox for ${TICKET_ID_UPPER}" >&2
+    exit 1
+  fi
+  local i=0
+  while [[ ${i} -lt 60 ]]; do
+    if compose ps ticket-dev --status running -q 2>/dev/null | grep -q .; then
+      return 0
+    fi
+    i=$((i + 1))
+    sleep 1
+  done
+  echo "Error: ticket-dev container is not running after startup." >&2
+  compose ps -a >&2 || true
+  exit 1
+}
+
 if [[ "${MODE}" == "cleanup" ]]; then
   echo "Removing sandbox for ${TICKET_ID_UPPER} (container, db, workspace volume)..."
   compose down --volumes --remove-orphans
@@ -84,9 +102,9 @@ for vol in tutor-timetable-go-mod-cache tutor-timetable-npm-cache tutor-timetabl
 done
 
 if [[ "${MODE}" == "shell" ]]; then
-  compose up -d --build
-  echo "Opening shell in ${TICKET_ID_UPPER} sandbox (workspace may be empty if the agent never ran)..."
-  exec docker compose -p "${PROJECT}" -f "${COMPOSE_FILE}" exec ticket-dev bash
+  ensure_sandbox_running
+  echo "Opening shell in ${TICKET_ID_UPPER} sandbox..."
+  exec compose exec ticket-dev bash
 fi
 
 # --- run / resume ---
@@ -195,10 +213,7 @@ fi
 echo "  Branch: ${BRANCH_NAME}"
 echo "  Sandbox project: ${PROJECT}"
 
-if ! compose up -d --build; then
-  echo "Error: failed to start sandbox for ${TICKET_ID_UPPER}" >&2
-  exit 1
-fi
+ensure_sandbox_running
 
 REPO_URL="https://github.com/${GH_ALLOWED_REPO_PATH%.git}.git"
 
@@ -206,6 +221,13 @@ echo "Initializing workspace (clone from ${REPO_URL})..."
 if ! compose exec -T ticket-dev bash -s -- "${REPO_URL}" "${BRANCH_NAME}" \
     < "${SCRIPT_DIR}/sandbox/init-workspace.sh"; then
   echo "Error: workspace initialization failed for ${TICKET_ID_UPPER}" >&2
+  exit 1
+fi
+
+echo "Preparing agent environment..."
+if ! compose exec -T ticket-dev bash -s -- "${AGENT_CLI}" \
+    < "${SCRIPT_DIR}/sandbox/prepare-agent.sh"; then
+  echo "Error: agent preparation failed for ${TICKET_ID_UPPER}" >&2
   exit 1
 fi
 
@@ -274,15 +296,23 @@ set +e
 if [[ "${AGENT_CLI}" == "cursor" ]]; then
   compose exec -T ticket-dev \
     bash -c 'cursor-agent -p --force --sandbox disabled "$(cat /workspace/.agent-prompt.txt)"' \
+    < /dev/null \
     2>&1 | tee "${LOG_FILE}"
   AGENT_EXIT=${PIPESTATUS[0]}
 else
   compose exec -T ticket-dev \
     bash -c 'claude --dangerously-skip-permissions -p "$(cat /workspace/.agent-prompt.txt)"' \
+    < /dev/null \
     2>&1 | tee "${LOG_FILE}"
   AGENT_EXIT=${PIPESTATUS[0]}
 fi
 set -e
+
+if ! compose ps ticket-dev --status running -q 2>/dev/null | grep -q .; then
+  echo "Warning: ticket-dev container stopped during the agent run (exit ${AGENT_EXIT})." >&2
+  echo "  Restart with: $0 ${TICKET_ID} --resume" >&2
+  echo "  Inspect with: $0 ${TICKET_ID} --shell" >&2
+fi
 
 compose exec -T ticket-dev bash -c 'rm -f /workspace/.agent-prompt.txt' || true
 

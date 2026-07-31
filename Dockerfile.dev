@@ -93,4 +93,6 @@ RUN chown "${USER_UID}:${USER_GID}" /workspace \
 
 USER ${USERNAME}
 
-CMD ["/bin/bash"]
+# Keep the container alive for `docker compose exec` sessions; bash as PID 1
+# can exit when the TTY detaches and leave a stale "Exited" container.
+CMD ["sleep", "infinity"]

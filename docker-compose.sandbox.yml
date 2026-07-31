@@ -8,6 +8,7 @@
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: timetable
       POSTGRES_USER: timetable
@@ -26,6 +27,7 @@ services:
         USER_UID: ${HOST_UID:-1000}
         USER_GID: ${HOST_GID:-1000}
     image: tutor-timetable-ticket-dev:latest
+    restart: unless-stopped
     working_dir: /workspace
     stdin_open: true
     tty: true
